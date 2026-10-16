@@ -1,67 +1,139 @@
-# Template de démonstration
+# Toyota / Lexus
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+Cette intégration amène vos **voitures Toyota et Lexus** dans Gladys par les
+**services connectés MyToyota** de Toyota Motor Europe (l'application
+MyToyota, et Lexus Link pour une Lexus) : niveaux de carburant et de batterie,
+charge, autonomies, kilométrage, verrouillage, portes et fenêtres, voyants
+d'alerte et dernier trajet. Elle utilise le compte de l'application. Non
+officielle, sans lien avec Toyota ni Lexus.
+
+> **Version de développement (0.1).** Construite à partir du protocole de
+> pytoyoda (la bibliothèque de l'intégration Home Assistant ha_toyota) et
+> testée avec des réponses simulées, pas encore avec une vraie voiture. Les
+> retours sont les bienvenus sur le dépôt GitHub.
+
+Europe uniquement : les voitures d'Amérique du Nord utilisent une autre API
+(application Toyota, pas MyToyota) et ne sont pas prises en charge.
 
 ## Ce que vous obtenez
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+Un appareil par voiture du compte (nommé d'après le surnom donné dans
+l'application), avec les fonctionnalités que la voiture remonte :
 
-## Configuration
+| Fonctionnalité                  | Voitures                       | Dans Gladys                                                         |
+| ------------------------------- | ------------------------------ | ------------------------------------------------------------------- |
+| Niveau de carburant             | thermique, hybride, PHEV       | pourcentage                                                         |
+| Autonomie carburant             | thermique, hybride, PHEV       | km                                                                  |
+| Niveau de batterie              | hybride rechargeable, élec.    | pourcentage (jauge de batterie)                                     |
+| Autonomie électrique            | hybride rechargeable, élec.    | km                                                                  |
+| Autonomie totale                | hybride rechargeable           | km, carburant + électrique (climatisation en marche, comme l'appli) |
+| Kilométrage                     | toutes                         | km                                                                  |
+| État de la charge               | hybride rechargeable, élec.    | en charge, véhicule branché, inactif (charge finie ou débranché)    |
+| Branchée                        | hybride rechargeable, élec.    | oui / non                                                           |
+| Temps de charge restant         | hybride rechargeable, élec.    | minutes                                                             |
+| Verrouillée                     | si remonté                     | verrouillée quand toutes les portes et le coffre le sont            |
+| Porte, coffre, capot ouvert     | si remonté                     | ouvert / fermé (n'importe quelle porte pour « Porte ouverte »)      |
+| Fenêtre ouverte                 | si remonté                     | ouverte / fermée (n'importe quelle fenêtre)                         |
+| Position de stationnement       | option, si remontée            | texte « latitude, longitude » de la dernière position garée         |
+| Voyants d'alerte                | toutes                         | nombre de voyants d'alerte remontés                                 |
+| Dernier trajet                  | toutes                         | texte : fin, distance, durée, L/100 km, % électrique, score         |
+| Distance et carburant du trajet | toutes (carburant : pas élec.) | km et litres, enregistrés une fois par trajet, à sa fin             |
+| Dernière remontée de la voiture | toutes                         | quand la voiture a envoyé ses données à Toyota                      |
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+Les distances en miles sont converties en km. **Lecture seule** : pas encore
+de commande de verrouillage, déverrouillage, climatisation ou charge (voir
+« Commandes à distance » plus bas).
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+## Installation
 
-## Actions
-
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+1. Utilisez une fois l'application MyToyota (ou Lexus Link) : la voiture doit
+   être ajoutée au compte et ses services connectés actifs.
+2. Dans Gladys, installez l'intégration, puis saisissez dans sa configuration
+   l'**e-mail** et le **mot de passe** de l'application et choisissez la
+   **marque** (Toyota ou Lexus).
+3. Cliquez sur **Tester la connexion** : elle liste les voitures du compte.
+4. Ouvrez l'onglet **Découverte** et ajoutez les voitures.
 
 ## Scènes
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+- **Déclencheur « Trajet terminé »** : un nouveau trajet est apparu dans
+  MyToyota (lu après l'arrêt de la voiture, à la lecture suivante). Filtre :
+  la voiture. Variables : nom de la voiture, distance (km), durée (min),
+  carburant consommé (L), consommation (L/100 km), part roulée en électrique
+  (%), score de conduite, fin du trajet.
+- **Action « Lire les voitures maintenant »** : lit tout de suite les
+  dernières valeurs connues de Toyota, pour toutes les voitures ou une seule,
+  voyants et dernier trajet compris (au plus une fois toutes les deux
+  minutes). Utile en arrivant à la maison, par exemple.
+- Chaque fonctionnalité peut aussi déclencher une scène de la façon habituelle
+  (voiture déverrouillée, coffre ouvert, batterie sous 20 %, charge
+  terminée…).
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+## Fréquence de lecture
 
-## Tableau de bord
+- Toutes les **15 minutes** par défaut (5 minutes minimum, voir les options),
+  une requête à la fois avec une pause entre deux : Toyota répond « trop de
+  requêtes » aux comptes lus trop souvent, et aux rafales.
+- Chaque voiture ne lit que ce que le compte annonce : télémétrie (carburant,
+  kilométrage), état électrique (batterie, charge), portes et verrouillage, et
+  la position de stationnement seulement si vous avez activé l'option.
+- Les voyants toutes les 6 heures ; le dernier trajet quand le kilométrage a
+  changé (et toutes les 6 heures) ; la liste des voitures une fois par jour et
+  à chaque **Scan**.
+- **La voiture n'est jamais réveillée** : les valeurs sont celles que Toyota
+  garde, envoyées par la voiture d'elle-même (arrêt du moteur, verrouillage,
+  charge…). Sa batterie 12 V est épargnée, mais une valeur peut dater de
+  quelques heures : voir « Dernière remontée de la voiture ». L'application
+  MyToyota affiche les mêmes valeurs.
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+## Options
+
+| Option                             | Par défaut | Effet                                                                  |
+| ---------------------------------- | ---------- | ---------------------------------------------------------------------- |
+| Marque du compte                   | Toyota     | Toyota (application MyToyota) ou Lexus (application Lexus Link)        |
+| Intervalle de rafraîchissement (s) | 900        | fréquence de lecture des voitures (300 à 86400)                        |
+| Position de stationnement          | désactivée | ajoute la dernière position garée ; désactivée, elle est oubliée       |
+| Langue des noms de fonctionnalités | français   | noms des fonctionnalités des appareils ajoutés (ou mis à jour) ensuite |
+
+## Commandes à distance
+
+L'API de Toyota a des commandes (verrouiller, déverrouiller, climatisation,
+charge), mais elles ne sont pas dans cette version : en Europe elles
+dépendent de l'abonnement aux services à distance de chaque voiture, Toyota
+est en train de déplacer leurs adresses, les démarrages de climatisation sont
+limités par cycle de contact, et elles n'ont pas pu être vérifiées sur une
+vraie voiture. Elles sont prévues, en option, une fois confirmées.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **« MyToyota a refusé l'e-mail ou le mot de passe »** : vérifiez-les dans
+  l'application, puis dans la configuration. L'intégration ne réessaie pas
+  d'elle-même (Toyota peut bloquer un compte qui insiste) : elle attend une
+  modification ou un clic sur **Tester la connexion**.
+- **« demande de ralentir »** : augmentez l'intervalle de rafraîchissement,
+  et arrêtez si possible les autres outils qui lisent le même compte (Home
+  Assistant, Node-RED…).
+- **« La connexion MyToyota a répondu de façon inattendue »** : Toyota a
+  peut-être modifié sa connexion ; l'intégration réessaie toutes les 6
+  heures. Merci d'ouvrir un ticket sur GitHub.
+- **Une fonctionnalité n'a jamais de valeur** : la voiture ou son abonnement
+  ne la remonte pas (les portes de certains modèles, la position, l'état
+  électrique de certaines hybrides). Un service que Toyota refuse pour une
+  voiture n'est redemandé qu'une fois par jour.
+- **Valeurs anciennes** : la voiture ne remonte ses données qu'à certains
+  moments ; roulez ou verrouillez-la, puis utilisez l'action de scène « Lire
+  les voitures maintenant ».
+
+## Vie privée
+
+L'e-mail et le mot de passe sont gardés par Gladys comme un secret (jamais
+renvoyés au navigateur). L'intégration ne les envoie qu'à
+`b2c-login.toyota-europe.com`, la connexion de l'application MyToyota, pour
+ouvrir une session ; elle garde les jetons d'accès et de renouvellement et
+l'identifiant utilisateur dans son dossier `/data` (avec une empreinte de
+l'e-mail, jamais le mot de passe), et lit les voitures sur
+`ctpa-oneapi.tceu-ctp-prd.toyotaconnectedeurope.io`. Les journaux ne montrent
+que les quatre derniers caractères d'un VIN, jamais la position. La position
+de stationnement n'est lue que si vous activez l'option. Toyota, Lexus et
+MyToyota sont des marques de leurs propriétaires ; cette intégration est sans
+lien avec Toyota ni Lexus.

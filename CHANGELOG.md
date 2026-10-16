@@ -12,44 +12,29 @@ the notes of the version's GitHub Release.
 
 ### Added
 
-- A working example of scene triggers, scene actions and dashboard widgets
-  (Gladys 5.1.0 or later).
-- `CHANGELOG.md`, rolled by the Release workflow.
-- A GitHub Release for every version, with its changelog section as notes: the
-  Gladys Supervision page links each version to the repository's releases.
-- CI runs the tests on Node 22 and 24, and builds the Docker image.
-- Dependabot keeps the npm dependencies and the GitHub Actions up to date.
-- `SECURITY.md` (how to report a vulnerability) and `CLAUDE.md` (project rules
-  for contributors and coding assistants).
-- Manifest tests: `version` matches `package.json`, `docker_image` is tagged
-  with it, descriptions hold 10 to 100 characters, placeholders are
-  multi-language objects.
-- The latitude and longitude fields show an example value as placeholder.
+- MyToyota account (the e-mail and password of the MyToyota app, or of Lexus
+  Link with the Lexus brand), Toyota Connected Services Europe: the session is
+  kept in `/data` and renewed with its refresh token, so a restart does not
+  sign in again; a refused password is reported and never retried on its own
+  (Toyota may lock accounts that insist); a sign-in page that changed is
+  reported and tried again every 6 hours.
+- One device per car of the account, named after its nickname: fuel level and
+  range, battery level and electric range (plug-in hybrids and electric
+  cars), total range of plug-in hybrids, odometer, charging state, plugged in,
+  charge time remaining, locked, door, boot, bonnet and window open, number of
+  warning lights, the last trip (summary, distance and fuel recorded once per
+  trip at its end), and when the car last reported. Distances in km.
+- Optional parked position (off by default, forgotten when turned off).
+- Scene trigger "Trip ended" (distance, duration, fuel, consumption, share
+  driven electric, driving score) and scene action "Read the cars now" (all
+  cars or one, at most every two minutes).
+- Reads every 15 minutes by default (5 minutes minimum), one request at a
+  time, only what each car supports; warning lights every 6 hours, the last
+  trip when the odometer moved, the list of cars once a day. The car is never
+  woken up (its 12 V battery is spared). An endpoint Toyota refuses for a car
+  is asked again a day later; a 429 pauses the reads as long as Toyota asks
+  (30 minutes otherwise); other failures back off from 5 minutes to an hour.
+- "Test the connection" button with a summary of the cars, cloud badges
+  marked unreachable when MyToyota is, feature names in French or English.
 
-### Changed
-
-- Node.js 22 or later is required (Node 20 is end-of-life).
-- Integration SDK 0.15.0. The tests now run against the fake Gladys of the
-  SDK, which refuses the payloads Gladys refuses.
-- The refresh interval is one minute minimum, the fastest Gladys polls a
-  device. The plug's power is only sent when it changes, and every 30
-  minutes otherwise.
-
-### Fixed
-
-- Gladys refused the devices of the Discovery tab: the weather station and
-  the plug declared their poll frequency in seconds instead of one of the
-  values Gladys accepts, and were never polled. They now poll every minute,
-  and the readings follow the refresh interval of the configuration.
-
-- The release commit no longer fails `npm run format:check`: the Release
-  workflow updates the manifest `version` and `docker_image` in place instead
-  of re-printing the whole file with `jq`.
-- The integration can write to `/data`: the image creates the directory owned
-  by the `node` user, a new Docker volume was owned by root.
-- A sub-container running the integration's own image follows it to the new
-  tag at each release, as well as in the manifest of the build summary: it kept
-  the previous tag, which may not exist on the registry. Sub-containers on a
-  third-party image (a broker, a database...) keep theirs.
-
-[Unreleased]: https://github.com/GladysAssistant/integration-template-js/commits/main
+[Unreleased]: https://github.com/LM1LC3N7/gladys-toyota/commits/main

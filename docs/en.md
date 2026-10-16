@@ -1,61 +1,128 @@
-# Demo Devices Template
+# Toyota / Lexus
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+This integration brings your **Toyota and Lexus cars** into Gladys through the
+**MyToyota connected services** of Toyota Motor Europe (the MyToyota app, and
+Lexus Link for a Lexus): fuel and battery levels, charging, ranges, odometer,
+locks, doors and windows, warning lights and the last trip. It uses the
+account of the app. Unofficial, not affiliated with Toyota or Lexus.
+
+> **Development version (0.1).** Built from the protocol of pytoyoda (the
+> library of the Home Assistant integration ha_toyota) and tested with
+> simulated answers, not with a real car yet. Feedback is welcome on the
+> GitHub repository.
+
+Europe only: the cars of North America use another API (Toyota app, not
+MyToyota) and are not supported.
 
 ## What you get
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+One device per car of the account (named after the nickname given in the
+app), with the features the car reports:
 
-## Configuration
+| Feature                  | Cars                     | In Gladys                                                  |
+| ------------------------ | ------------------------ | ---------------------------------------------------------- |
+| Fuel level               | fuel, hybrid, plug-in    | percent                                                    |
+| Fuel range               | fuel, hybrid, plug-in    | km                                                         |
+| Battery level            | plug-in hybrid, electric | percent (battery gauge)                                    |
+| Electric range           | plug-in hybrid, electric | km                                                         |
+| Total range              | plug-in hybrid           | km, fuel + electric (air conditioning on, as the app)      |
+| Odometer                 | all                      | km                                                         |
+| Charging state           | plug-in hybrid, electric | charging, vehicle connected, idle (complete or unplugged)  |
+| Plugged in               | plug-in hybrid, electric | yes / no                                                   |
+| Charge time remaining    | plug-in hybrid, electric | minutes                                                    |
+| Locked                   | when reported            | locked when every door and the boot are locked             |
+| Door, boot, bonnet open  | when reported            | open / closed (any side door for "Door open")              |
+| Window open              | when reported            | open / closed (any window)                                 |
+| Parked position          | option, when reported    | text "latitude, longitude" of the last parked position     |
+| Warning lights           | all                      | number of dashboard warning lights reported                |
+| Last trip                | all                      | text: end, distance, duration, L/100 km, % electric, score |
+| Last trip distance, fuel | all (fuel: not electric) | km and litres, recorded once per trip at its end           |
+| Last report from the car | all                      | when the car last sent its data to Toyota                  |
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+Distances in miles are converted to km. **Read only**: no lock, unlock,
+climate or charging command yet (see "Remote commands" below).
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+## Installation
 
-## Actions
-
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+1. Use the MyToyota app (or Lexus Link) once: the car must be added to the
+   account and its connected services active.
+2. In Gladys, install the integration, then in its configuration enter the
+   **e-mail** and **password** of the app and choose the **brand** (Toyota
+   or Lexus).
+3. Click **Test the connection**: it lists the cars of the account.
+4. Open the **Discovery** tab and add the cars.
 
 ## Scenes
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+- **Trigger "Trip ended"**: a new trip appeared in MyToyota (read after the
+  car stopped, at the next read). Filter: the car. Variables: car name,
+  distance (km), duration (min), fuel used (L), consumption (L/100 km),
+  share driven electric (%), driving score, end of the trip.
+- **Action "Read the cars now"**: reads Toyota's last values now, for every
+  car or one, the warning lights and the last trip included (at most once
+  every two minutes). Useful when you arrive home, for instance.
+- Every feature can also trigger a scene the usual way (car unlocked, boot
+  open, battery below 20 %, charge finished…).
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+## How often it reads
 
-## Dashboard
+- Every **15 minutes** by default (5 minutes minimum, see the options), one
+  request at a time with a pause in between: Toyota answers "too many
+  requests" to accounts read too often, and to bursts.
+- Each car reads only what the account says it supports: telemetry (fuel,
+  odometer), electric status (battery, charging), doors and locks, and the
+  parked position only if you turned the option on.
+- The warning lights every 6 hours; the last trip when the odometer moved
+  (and every 6 hours); the list of cars once a day and on **Scan**.
+- **The car is never woken up**: the values are the ones Toyota keeps, sent
+  by the car on its own (engine stop, locking, charging…). This spares its
+  12 V battery, but a value can be a few hours old: see "Last report from
+  the car". The MyToyota app shows the same values.
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+## Options
+
+| Option                        | Default | What it does                                                        |
+| ----------------------------- | ------- | ------------------------------------------------------------------- |
+| Brand of the account          | Toyota  | Toyota (MyToyota app) or Lexus (Lexus Link app)                     |
+| Refresh interval (s)          | 900     | how often the cars are read (300 to 86400)                          |
+| Parked position               | off     | adds the last parked position; turned off, it is forgotten          |
+| Language of the feature names | French  | names of the features of the devices added (or updated) from now on |
+
+## Remote commands
+
+Toyota's API has commands (lock, unlock, climate, charging), but they are not
+in this version: in Europe they depend on the remote services subscription
+of each car, their routes are being moved by Toyota, climate starts are
+limited per ignition cycle, and they could not be checked on a real car.
+They are planned as an opt-in once confirmed.
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- **"MyToyota refused the e-mail or password"**: check them in the app,
+  then in the configuration. The integration does not retry by itself
+  (Toyota may lock an account that insists): it waits for a change or a
+  click on **Test the connection**.
+- **"asks to slow down"**: raise the refresh interval, and stop other tools
+  reading the same account (Home Assistant, Node-RED…) if you can.
+- **"The MyToyota sign-in answered unexpectedly"**: Toyota may have changed
+  its sign-in; the integration tries again every 6 hours. Please open an
+  issue on GitHub.
+- **A feature never gets a value**: the car or its subscription does not
+  report it (the doors of some models, the position, the electric status of
+  some hybrids). An endpoint Toyota refuses for a car is asked again once a
+  day only.
+- **Old values**: the car only reports at certain moments; drive or lock it,
+  then use the scene action "Read the cars now".
+
+## Privacy
+
+The e-mail and password are stored by Gladys as a secret (never sent back to
+the browser). The integration only sends them to `b2c-login.toyota-europe.com`,
+the sign-in of the MyToyota app, to open a session; it keeps the access and
+refresh tokens and the user id in its `/data` folder (with a hash of the
+e-mail, never the password), and reads the cars from
+`ctpa-oneapi.tceu-ctp-prd.toyotaconnectedeurope.io`. The logs show only the
+last four characters of a VIN, never the position. The parked position is
+only read when you turn the option on. Toyota, Lexus and MyToyota are
+trademarks of their owners; this integration is not affiliated with Toyota
+or Lexus.
