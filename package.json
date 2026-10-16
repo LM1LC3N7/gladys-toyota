@@ -1,6 +1,6 @@
 {
   "name": "gladys-toyota",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Gladys Assistant external integration for Toyota and Lexus cars in Europe (MyToyota connected services). Unofficial, not affiliated with Toyota or Lexus.",
   "type": "module",
